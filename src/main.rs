@@ -53,16 +53,14 @@ fn setup(
     .insert(Transform::default())
     .insert(Velocity(Vec3::default()))
     .insert(Mass(100.0));
-    //.with_children(|parent| {
-        commands.spawn_bundle(PerspectiveCameraBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 50.0))
-                .looking_at(Vec3::default(), Vec3::Y),
-            perspective_projection: PerspectiveProjection {
-                ..Default::default()
-            },
-            ..PerspectiveCameraBundle::new_3d()
-        });
-    //});
+    commands.spawn_bundle(PerspectiveCameraBundle {
+        transform: Transform::from_translation(Vec3::new(0.0, 0.0, 50.0))
+            .looking_at(Vec3::default(), Vec3::Y),
+        perspective_projection: PerspectiveProjection {
+            ..Default::default()
+        },
+        ..PerspectiveCameraBundle::new_3d()
+    });
 }
 
 fn update_player(
