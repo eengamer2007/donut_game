@@ -36,7 +36,7 @@ fn setup(
         ..Default::default()
     })
     .insert(Mass(1000.0))
-    .insert(Planet);
+    .insert(Planet(5.0));
     //spawn the light
     commands.spawn_bundle(PointLightBundle {
         transform: Transform::from_translation(Vec3::new(50.0, 50.0, 50.0)),
@@ -66,6 +66,7 @@ fn setup(
 fn update_player(
     time: Res<Time>,
     mut query: Query<(&mut Mass, &mut Velocity, &mut Transform), With<Player>>,
+    mut query_planet: Query<&mut Mass, With<Planet>>,
 ){
     for (_mass, velocity, mut transform) in query.iter_mut() {
         transform.translation += velocity.0 * time.delta().as_secs_f32();
@@ -83,4 +84,4 @@ struct Player;
 struct Velocity(Vec3);
 
 #[derive(Component)]
-struct Planet;
+struct Planet(f32);
