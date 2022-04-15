@@ -18,9 +18,14 @@ fn main() {
         width: 750.0,
         height: 500.0,
         vsync: false,
-        mode: WindowMode::Windowed,
+        cursor_locked: true,
+        cursor_visible: false,
+        mode: WindowMode::Windowed, //in a window
+        //mode: WindowMode::BorderlessFullscreen, //full screen
         ..Default::default()
     })
+    //add events
+    .add_event::<bevy::app::AppExit>()
     //add plugins
     .add_plugins(DefaultPlugins)
     .add_plugin(EguiPlugin)
@@ -43,7 +48,11 @@ fn setup_ui(mut commands: Commands) {
     });
 }
 
-fn update_ui(mut context: ResMut<EguiContext>, diagnostic: Res<Diagnostics>) {
+fn update_ui(
+    mut context: ResMut<EguiContext>,
+    diagnostic: Res<Diagnostics>,
+    mut event: EventWriter<bevy::app::AppExit>,
+){
     egui::Window::new("frames").show(context.ctx_mut(), |ui| {
         ui.label(format!("frame time: {:.3}",
             match diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_TIME).unwrap().value() {
@@ -63,6 +72,9 @@ fn update_ui(mut context: ResMut<EguiContext>, diagnostic: Res<Diagnostics>) {
                 None => 0.0
             }
         ));
+        if ui.button("exit").clicked() {
+            event.send(bevy::app::AppExit);
+        }
     });
 }
 
@@ -144,7 +156,7 @@ fn update_player(
 fn spinny_donut(time: Res<Time>, mut query: Query<&mut Transform, With<Rotate>>) {
     for mut i in query.iter_mut() {
         i.rotate(Quat::from_rotation_x(3.0 * time.delta().as_secs_f32()));
-        i.rotate(Quat::from_rotation_y(1.5 * time.delta().as_secs_f32()));
+        i.rotate(Quat::from_rotation_z(1.0 * time.delta().as_secs_f32()));
     }
 }
 
