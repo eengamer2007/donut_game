@@ -14,12 +14,12 @@ fn main() {
     //insert resources
     app.insert_resource(ClearColor(Color::hex("000000").unwrap()))
     .insert_resource(WindowDescriptor{
-        title: "spinny donut go brrrrr".to_string(),
+        title: "not anymore spinny donut go brrrrr".to_string(),
         width: 750.0,
         height: 500.0,
         vsync: false,
-        cursor_locked: true,
-        cursor_visible: false,
+        cursor_locked: false,
+        cursor_visible: true,
         mode: WindowMode::Windowed, //in a window
         //mode: WindowMode::BorderlessFullscreen, //full screen
         ..Default::default()
@@ -52,6 +52,7 @@ fn update_ui(
     mut context: ResMut<EguiContext>,
     diagnostic: Res<Diagnostics>,
     mut event: EventWriter<bevy::app::AppExit>,
+    mut windows: ResMut<Windows>,
 ){
     egui::Window::new("frames").show(context.ctx_mut(), |ui| {
         ui.label(format!("frame time: {:.3}",
@@ -74,6 +75,16 @@ fn update_ui(
         ));
         if ui.button("exit").clicked() {
             event.send(bevy::app::AppExit);
+        }
+        let mut window = windows.get_primary_mut().unwrap();
+        match window.mode() {
+            WindowMode::Windowed => if ui.button("fullscreen").clicked() {
+                window.set_mode(WindowMode::BorderlessFullscreen);
+            }
+            WindowMode::BorderlessFullscreen => if ui.button("windowed").clicked() {
+                window.set_mode(WindowMode::Windowed);
+            }
+            _ => panic!("the fuck is going on with the window mode?")
         }
     });
 }
@@ -101,8 +112,8 @@ fn setup(
         ..Default::default()
     })
     .insert(Mass(1000.0))
-    .insert(Planet(5.0))
-    .insert(Rotate);
+    .insert(Rotate)
+    .insert(Planet(5.0));
 
     //spawn the light
     commands.spawn_bundle(PointLightBundle {
@@ -115,13 +126,24 @@ fn setup(
         ..Default::default()
     });
 
-    //spawn the player
-    commands.spawn()
+    /*/spawn the player
+    commands.spawn_bundle(PbrBundle{
+        mesh: meshes.add(Mesh::from(shape::Icosphere{
+            radius: 1.0,
+            subdivisions: 1,
+        })),
+        material: materials.add(StandardMaterial { 
+            base_color: Color::hex("ffffff").expect("god damn moron get the hex color right"),
+            ..Default::default()
+        }),
+        transform: Transform::from_xyz(0.0,10.0,1000.0),
+        ..Default::default()
+    })
     .insert(Player)
     .insert(Transform::from_xyz(0.0, 10.0, 50.0))
     .insert(Velocity(Vec3::default(), Vec3::default()))
     .insert(Mass(100.0));
-
+    */
     //spawn the camera
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 50.0))
