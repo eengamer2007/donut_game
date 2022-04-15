@@ -11,11 +11,10 @@ const GRAVITY: f32 = 0.01;
 fn main() {
     //make app
     let mut app = App::new();
-    //debug only shit
-    app.add_plugin(FrameTimeDiagnosticsPlugin);
     //insert resources
     app.insert_resource(ClearColor(Color::hex("000000").unwrap()))
     .insert_resource(WindowDescriptor{
+        title: "spinny donut go brrrrr".to_string(),
         width: 750.0,
         height: 500.0,
         vsync: false,
@@ -25,6 +24,7 @@ fn main() {
     //add plugins
     .add_plugins(DefaultPlugins)
     .add_plugin(EguiPlugin)
+    .add_plugin(FrameTimeDiagnosticsPlugin::default())
     //add startup systems
     .add_startup_system(setup)
     .add_startup_system(setup_ui)
@@ -32,6 +32,7 @@ fn main() {
     .add_system(update_player)
     .add_system(update_camera)
     .add_system(update_ui)
+    .add_system(spinny_donut)
     //run app
     .run();
 }
@@ -42,12 +43,26 @@ fn setup_ui(mut commands: Commands) {
     });
 }
 
-fn update_ui(mut context: ResMut<EguiContext>, ) {
-    let frame_time = 0.0;
+fn update_ui(mut context: ResMut<EguiContext>, diagnostic: Res<Diagnostics>) {
     egui::Window::new("frames").show(context.ctx_mut(), |ui| {
-        ui.label(format!(" frame time: {:}",frame_time));
-        ui.label(format!("        fps: {:}",frame_time));
-        ui.label(format!("frame count: {:}",frame_time));
+        ui.label(format!("frame time: {:.3}",
+            match diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_TIME).unwrap().value() {
+                Some(x) => x,
+                None => 0.0
+            }
+        ));
+        ui.label(format!("fps: {:.3}",
+            match diagnostic.get(FrameTimeDiagnosticsPlugin::FPS).unwrap().value() {
+                Some(x) => x,
+                None => 0.0
+            }
+        ));
+        ui.label(format!("frame count: {}",
+            match diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_COUNT).unwrap().value() {
+                Some(x) => x,
+                None => 0.0
+            }
+        ));
     });
 }
 
@@ -74,7 +89,8 @@ fn setup(
         ..Default::default()
     })
     .insert(Mass(1000.0))
-    .insert(Planet(5.0));
+    .insert(Planet(5.0))
+    .insert(Rotate);
 
     //spawn the light
     commands.spawn_bundle(PointLightBundle {
@@ -125,6 +141,13 @@ fn update_player(
     }
 }
 
+fn spinny_donut(time: Res<Time>, mut query: Query<&mut Transform, With<Rotate>>) {
+    for mut i in query.iter_mut() {
+        i.rotate(Quat::from_rotation_x(3.0 * time.delta().as_secs_f32()));
+        i.rotate(Quat::from_rotation_y(1.5 * time.delta().as_secs_f32()));
+    }
+}
+
 #[inline]
 fn calc_close_point_cirlce(a: Vec3, radius: f32) -> Vec3 {
     let vec = a.truncate();
@@ -137,6 +160,9 @@ fn calc_close_point_cirlce(a: Vec3, radius: f32) -> Vec3 {
 fn update_camera() {
 
 }
+
+#[derive(Component)]
+struct Rotate;
 
 #[derive(Component)]
 struct Mass(f32);
