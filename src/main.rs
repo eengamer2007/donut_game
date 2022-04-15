@@ -1,5 +1,8 @@
 use bevy::prelude::*;
 use bevy::window::WindowMode;
+use bevy::diagnostic::*;
+
+use bevy_egui::{egui, EguiContext, EguiPlugin};
 
 const GRAVITY: f32 = 0.01;
 
@@ -8,6 +11,8 @@ const GRAVITY: f32 = 0.01;
 fn main() {
     //make app
     let mut app = App::new();
+    //debug only shit
+    app.add_plugin(FrameTimeDiagnosticsPlugin);
     //insert resources
     app.insert_resource(ClearColor(Color::hex("000000").unwrap()))
     .insert_resource(WindowDescriptor{
@@ -19,13 +24,31 @@ fn main() {
     })
     //add plugins
     .add_plugins(DefaultPlugins)
+    .add_plugin(EguiPlugin)
     //add startup systems
     .add_startup_system(setup)
+    .add_startup_system(setup_ui)
     //add systems
     .add_system(update_player)
     .add_system(update_camera)
+    .add_system(update_ui)
     //run app
     .run();
+}
+
+fn setup_ui(mut commands: Commands) {
+    commands.spawn_bundle(UiCameraBundle{
+        ..Default::default()
+    });
+}
+
+fn update_ui(mut context: ResMut<EguiContext>, ) {
+    let frame_time = 0.0;
+    egui::Window::new("frames").show(context.ctx_mut(), |ui| {
+        ui.label(format!(" frame time: {:}",frame_time));
+        ui.label(format!("        fps: {:}",frame_time));
+        ui.label(format!("frame count: {:}",frame_time));
+    });
 }
 
 fn setup(
@@ -33,6 +56,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>
 ) {
+
     //spawn torus
     commands.spawn_bundle(PbrBundle{
         mesh: meshes.add(Mesh::from(shape::Torus{
@@ -46,11 +70,12 @@ fn setup(
             ..Default::default()
         }),
         transform: Transform::from_xyz(0.0,0.0,0.0)
-        .with_rotation(Quat::from_rotation_x(90.0)),
+        .with_rotation(Quat::from_rotation_x(std::f32::consts::PI/2.0)),
         ..Default::default()
     })
     .insert(Mass(1000.0))
     .insert(Planet(5.0));
+
     //spawn the light
     commands.spawn_bundle(PointLightBundle {
         transform: Transform::from_translation(Vec3::new(50.0, 0.0, 50.0)),
@@ -61,12 +86,15 @@ fn setup(
         },
         ..Default::default()
     });
-    //spawn the camera
+
+    //spawn the player
     commands.spawn()
     .insert(Player)
-    .insert(Transform::default())
+    .insert(Transform::from_xyz(0.0, 10.0, 50.0))
     .insert(Velocity(Vec3::default(), Vec3::default()))
     .insert(Mass(100.0));
+
+    //spawn the camera
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 50.0))
             .looking_at(Vec3::default(), Vec3::Y),
@@ -93,7 +121,7 @@ fn update_player(
             }
         }
         transform.translation += velocity.0 * time.delta().as_secs_f32();
-        println!("{}", velocity.0)
+        //println!("{}", velocity.0)
     }
 }
 
@@ -101,8 +129,9 @@ fn update_player(
 fn calc_close_point_cirlce(a: Vec3, radius: f32) -> Vec3 {
     let vec = a.truncate();
     let angle = vec.angle_between(Vec2::X);
-    
-    Vec3::ONE
+    let res = Vec3::new(radius*angle.cos(), radius*angle.sin(), 0.0);
+    //println!("{}",res);
+    return res
 }
 
 fn update_camera() {
