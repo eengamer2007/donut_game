@@ -7,6 +7,7 @@ use bevy_egui::{egui, EguiContext, EguiPlugin};
 
 const GRAVITY: f32 = 1000.0;
 const SPEED: f32 = 0.1;
+const ROTATE_SPEED: f32 = 0.01;
 
 //z is up, x and y is flat and the axis the donut is on
 
@@ -27,7 +28,7 @@ fn main() {
         //mode: WindowMode::BorderlessFullscreen, //full screen
         ..Default::default()
     })
-
+    .insert_resource(CameraRotation{x: 0.0, y: 0.0, z: 0.0})
     //add events
     .add_event::<bevy::app::AppExit>()
     //add plugins
@@ -66,13 +67,16 @@ fn update_fps_ui(
     .title_bar(false)
     .show(context.ctx_mut(), |ui| {
         ui.label(format!("frame time: {:.3}",
-            diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_TIME).unwrap().value().unwrap_or(f64::NAN)
+            diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_TIME)
+            .unwrap().value().unwrap_or(f64::NAN)
         ));
         ui.label(format!("fps: {:.3}",
-            diagnostic.get(FrameTimeDiagnosticsPlugin::FPS).unwrap().value().unwrap_or(f64::NAN)
+            diagnostic.get(FrameTimeDiagnosticsPlugin::FPS)
+            .unwrap().value().unwrap_or(f64::NAN)
         ));
         ui.label(format!("frame count: {}",
-            diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_COUNT).unwrap().value().unwrap_or(f64::NAN)
+            diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_COUNT)
+            .unwrap().value().unwrap_or(f64::NAN)
         ));
         if ui.button("exit").clicked() {
             event.send(bevy::app::AppExit);
@@ -186,6 +190,7 @@ fn update_player(
     query_planet: Query<(&mut Mass, &Planet), Without<Player>>,
     keyboard: Res<Input<KeyCode>>,
     mut mouse_motion_events: EventReader<MouseMotion>,
+    mut camera_rotation: ResMut<CameraRotation>
 ){
     for (mass, mut velocity, mut transform) in query.iter_mut() {
         let mut forces = Vec3::default();
@@ -232,9 +237,12 @@ fn update_player(
             velocity.0 -= -Vec3::Z * SPEED;
         }
         for i in mouse_motion_events.iter(){
-            transform.rotate(Quat::from_rotation_x(i.delta.x));
-            transform.rotate(Quat::from_rotation_y(i.delta.y));
+            camera_rotation.z +=  i.delta.x * ROTATE_SPEED;
+            camera_rotation.x += -i.delta.y * ROTATE_SPEED;
+            //transform.rotate(Quat::from_rotation_z(i.delta.x * ROTATE_SPEED));
+            //transform.rotate(Quat::from_rotation_x(-i.delta.y * ROTATE_SPEED));
         }
+        transform.rotation = camera_rotation.to_quat();
         transform.translation += velocity.0 * time.delta().as_millis() as f32;
         //println!("{}", transform.translation);
     }
@@ -278,6 +286,18 @@ fn print_curor_info(
 
     for event in mouse_motion_events.iter() {
         info!("{:?}", event);
+    }
+}
+
+struct CameraRotation{
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+}
+
+impl CameraRotation {
+    fn to_quat(&self) -> Quat {
+        Quat::from_scaled_axis(Vec3::new(self.x,self.y, self.z))
     }
 }
 
