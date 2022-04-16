@@ -13,6 +13,7 @@ fn main() {
     let mut app = App::new();
     //insert resources
     app.insert_resource(ClearColor(Color::hex("000000").unwrap()))
+    .insert_resource(Msaa{ samples: 4 })
     .insert_resource(WindowDescriptor{
         title: "not anymore spinny donut go brrrrr".to_string(),
         width: 750.0,
@@ -110,8 +111,8 @@ fn setup(
     //spawn torus
     commands.spawn_bundle(PbrBundle{
         mesh: meshes.add(Mesh::from(shape::Torus{
-            radius: 5.0,
-            ring_radius: 1.5,
+            radius: 10.,
+            ring_radius: 3.,
             subdivisions_segments: 25,
             subdivisions_sides: 25,
         })),
@@ -124,7 +125,7 @@ fn setup(
         ..Default::default()
     })
     .insert(Mass(1000.0))
-    //.insert(Rotate)
+    //.insert(SpinnyBoi)
     .insert(Planet(5.0));
 
     //spawn the light
@@ -141,14 +142,15 @@ fn setup(
     //spawn the player
     commands.spawn_bundle(PbrBundle{
         mesh: meshes.add(Mesh::from(shape::Icosphere{
-            radius: 5.0,
+            radius: 1.0,
             subdivisions: 1,
         })),
         material: materials.add(StandardMaterial { 
             base_color: Color::hex("ffffff").expect("god damn moron get the hex color right"),
             ..Default::default()
         }),
-        transform: Transform::from_xyz(0.0,10.0,5.0),
+        transform: Transform::from_xyz(5.0,25.0,0.0)
+        .looking_at(Vec3::default(), Vec3::Z),
         ..Default::default()
     })
     .insert(Player)
@@ -189,7 +191,7 @@ fn update_player(
     }
 }
 
-fn spinny_donut(time: Res<Time>, mut query: Query<&mut Transform, With<Rotate>>) {
+fn spinny_donut(time: Res<Time>, mut query: Query<&mut Transform, With<SpinnyBoi>>) {
     for mut i in query.iter_mut() {
         i.rotate(Quat::from_rotation_x(3.0 * time.delta().as_secs_f32()));
         i.rotate(Quat::from_rotation_z(1.0 * time.delta().as_secs_f32()));
@@ -205,12 +207,20 @@ fn calc_close_point_cirlce(a: Vec3, radius: f32) -> Vec3 {
     return res
 }
 
-fn update_camera() {
-
+fn update_camera(
+    mut camera: Query<&mut Transform, (With<Camera>, Without<Player>)>,
+    player: Query<&Transform, (With<Player>, Without<Camera>)>,
+){
+    for mut cam in camera.iter_mut() {
+        for player in player.iter() {
+            cam.translation = player.translation;
+            cam.rotation    = player.rotation;
+        }
+    }
 }
 
 #[derive(Component)]
-struct Rotate;
+struct SpinnyBoi;
 
 #[derive(Component)]
 struct Mass(f32);
