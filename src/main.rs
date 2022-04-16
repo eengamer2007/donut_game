@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy::window::WindowMode;
 use bevy::diagnostic::*;
+use bevy::input::mouse::MouseMotion;
 
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 
@@ -40,7 +41,8 @@ fn main() {
     .add_system(update_player)
     .add_system(update_camera)
     .add_system(update_fps_ui)
-    .add_system(spinny_donut)
+    //.add_system(spinny_donut)
+    //.add_system(print_curor_info)
     //run app
     .run();
 }
@@ -106,6 +108,9 @@ fn update_fps_ui(
         for i in player.iter(){
             ui.label(format!("{}", i.translation));
         }
+        for i in player.iter(){
+            ui.label(format!("{}", i.rotation));
+        }
     });
 }
 
@@ -132,7 +137,7 @@ fn setup(
         ..Default::default()
     })
     .insert(Mass(1000.0))
-    .insert(SpinnyBoi)
+    //.insert(SpinnyBoi)
     .insert(Planet(5.0));
 
     //spawn the light
@@ -149,7 +154,7 @@ fn setup(
     //spawn the player
     commands.spawn_bundle(PbrBundle{
         mesh: meshes.add(Mesh::from(shape::Icosphere{
-            radius: 1.0,
+            radius: 5.0,
             subdivisions: 1,
         })),
         material: materials.add(StandardMaterial { 
@@ -180,6 +185,7 @@ fn update_player(
     mut query: Query<(&mut Mass, &mut Velocity, &mut Transform), With<Player>>,
     query_planet: Query<(&mut Mass, &Planet), Without<Player>>,
     keyboard: Res<Input<KeyCode>>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
 ){
     for (mass, mut velocity, mut transform) in query.iter_mut() {
         let mut forces = Vec3::default();
@@ -196,9 +202,9 @@ fn update_player(
         //println!("{forces}");
         velocity.0 += forces/mass.0;
         if keyboard.just_pressed(KeyCode::W) {
-            velocity.0 += Vec3::Y * SPEED * -1.;
+            velocity.0 += -Vec3::Y * SPEED;
         } else if keyboard.just_released(KeyCode::W) {
-            velocity.0 -= Vec3::Y * SPEED * -1.;
+            velocity.0 -= -Vec3::Y * SPEED;
         }
         if keyboard.just_pressed(KeyCode::S) {
             velocity.0 += Vec3::Y * SPEED;
@@ -211,9 +217,16 @@ fn update_player(
             velocity.0 -= Vec3::X * SPEED;
         }
         if keyboard.just_pressed(KeyCode::D) {
-            velocity.0 += Vec3::X * SPEED * -1.;
+            velocity.0 += -Vec3::X * SPEED;
         } else if keyboard.just_released(KeyCode::D) {
-            velocity.0 -= Vec3::X * SPEED * -1.;
+            velocity.0 -= -Vec3::X * SPEED;
+        }
+        for event in mouse_motion_events.iter() {
+            info!("{:?}", event);
+        }
+        for i in mouse_motion_events.iter(){
+            transform.rotate(Quat::from_rotation_x(i.delta.x));
+            transform.rotate(Quat::from_rotation_y(i.delta.y));
         }
         transform.translation += velocity.0 * time.delta().as_millis() as f32;
         //println!("{}", transform.translation);
@@ -245,6 +258,19 @@ fn update_camera(
             cam.translation = player.translation;
             cam.rotation    = player.rotation;
         }
+    }
+}
+
+fn print_curor_info(
+    mut cursor_moved_events: EventReader<CursorMoved>,
+    mut mouse_motion_events: EventReader<MouseMotion>,
+){
+    for event in cursor_moved_events.iter() {
+        info!("{:?}", event);
+    }
+
+    for event in mouse_motion_events.iter() {
+        info!("{:?}", event);
     }
 }
 
