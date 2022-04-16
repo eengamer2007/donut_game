@@ -221,8 +221,15 @@ fn update_player(
         } else if keyboard.just_released(KeyCode::D) {
             velocity.0 -= -Vec3::X * SPEED;
         }
-        for event in mouse_motion_events.iter() {
-            info!("{:?}", event);
+        if keyboard.just_pressed(KeyCode::Q) {
+            velocity.0 += Vec3::Z * SPEED;
+        } else if keyboard.just_released(KeyCode::Q) {
+            velocity.0 -= Vec3::Z * SPEED;
+        }
+        if keyboard.just_pressed(KeyCode::E) {
+            velocity.0 += -Vec3::Z * SPEED;
+        } else if keyboard.just_released(KeyCode::E) {
+            velocity.0 -= -Vec3::Z * SPEED;
         }
         for i in mouse_motion_events.iter(){
             transform.rotate(Quat::from_rotation_x(i.delta.x));
