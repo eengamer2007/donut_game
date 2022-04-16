@@ -5,6 +5,7 @@ use bevy::diagnostic::*;
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 
 const GRAVITY: f32 = 1000.0;
+const SPEED: f32 = 0.1;
 
 //z is up, x and y is flat and the axis the donut is on
 
@@ -18,7 +19,7 @@ fn main() {
         title: "not anymore spinny donut go brrrrr".to_string(),
         width: 750.0,
         height: 500.0,
-        vsync: false,
+        vsync: true,
         cursor_locked: false,
         cursor_visible: true,
         mode: WindowMode::Windowed, //in a window
@@ -38,7 +39,7 @@ fn main() {
     //add systems
     .add_system(update_player)
     .add_system(update_camera)
-    .add_system(update_ui)
+    .add_system(update_fps_ui)
     .add_system(spinny_donut)
     //run app
     .run();
@@ -50,11 +51,12 @@ fn setup_ui(mut commands: Commands) {
     });
 }
 
-fn update_ui(
+fn update_fps_ui(
     mut context: ResMut<EguiContext>,
     diagnostic: Res<Diagnostics>,
     mut event: EventWriter<bevy::app::AppExit>,
     mut windows: ResMut<Windows>,
+    player: Query<&Transform, With<Player>>,
 ){
     egui::Window::new("")
     .anchor(egui::Align2::LEFT_TOP, (0.0,0.0))
@@ -98,9 +100,14 @@ fn update_ui(
         ).clicked() {
             window.set_mode(WindowMode::SizedFullscreen);
         }
+        if ui.add(egui::Button::new(format!("vsync: {}", window.vsync()))).clicked() {
+            window.set_vsync(!window.vsync())
+        }
+        for i in player.iter(){
+            ui.label(format!("{}", i.translation));
+        }
     });
 }
-
 
 fn setup(
     mut commands: Commands,
@@ -125,7 +132,7 @@ fn setup(
         ..Default::default()
     })
     .insert(Mass(1000.0))
-    //.insert(SpinnyBoi)
+    .insert(SpinnyBoi)
     .insert(Planet(5.0));
 
     //spawn the light
@@ -172,6 +179,7 @@ fn update_player(
     time: Res<Time>,
     mut query: Query<(&mut Mass, &mut Velocity, &mut Transform), With<Player>>,
     query_planet: Query<(&mut Mass, &Planet), Without<Player>>,
+    keyboard: Res<Input<KeyCode>>,
 ){
     for (mass, mut velocity, mut transform) in query.iter_mut() {
         let mut forces = Vec3::default();
@@ -179,15 +187,36 @@ fn update_player(
             let direction = calc_close_point_cirlce(transform.translation, planet.0);
             //println!("{direction}");
             let distance: f32 = direction.distance(transform.translation);
-            println!("{distance}");
+            //println!("{distance}");
             if direction.length() <= 1.5 {
-                forces += direction.normalize() * (GRAVITY * ((mass.0 * planet_mass.0)/(distance*distance)));
+                forces += 
+                direction.normalize() * (GRAVITY * ((mass.0 * planet_mass.0)/(distance*distance)));
             }
         }
-        println!("{forces}");
+        //println!("{forces}");
         velocity.0 += forces/mass.0;
+        if keyboard.just_pressed(KeyCode::W) {
+            velocity.0 += Vec3::Y * SPEED * -1.;
+        } else if keyboard.just_released(KeyCode::W) {
+            velocity.0 -= Vec3::Y * SPEED * -1.;
+        }
+        if keyboard.just_pressed(KeyCode::S) {
+            velocity.0 += Vec3::Y * SPEED;
+        } else if keyboard.just_released(KeyCode::S) {
+            velocity.0 -= Vec3::Y * SPEED;
+        }
+        if keyboard.just_pressed(KeyCode::A) {
+            velocity.0 += Vec3::X * SPEED;
+        } else if keyboard.just_released(KeyCode::A) {
+            velocity.0 -= Vec3::X * SPEED;
+        }
+        if keyboard.just_pressed(KeyCode::D) {
+            velocity.0 += Vec3::X * SPEED * -1.;
+        } else if keyboard.just_released(KeyCode::D) {
+            velocity.0 -= Vec3::X * SPEED * -1.;
+        }
         transform.translation += velocity.0 * time.delta().as_millis() as f32;
-        println!("{}", velocity.0)
+        //println!("{}", transform.translation);
     }
 }
 
