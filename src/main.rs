@@ -4,7 +4,7 @@ use bevy::diagnostic::*;
 
 use bevy_egui::{egui, EguiContext, EguiPlugin};
 
-const GRAVITY: f32 = 0.01;
+const GRAVITY: f32 = 1000.0;
 
 //z is up, x and y is flat and the axis the donut is on
 
@@ -24,6 +24,7 @@ fn main() {
         //mode: WindowMode::BorderlessFullscreen, //full screen
         ..Default::default()
     })
+
     //add events
     .add_event::<bevy::app::AppExit>()
     //add plugins
@@ -54,40 +55,51 @@ fn update_ui(
     mut event: EventWriter<bevy::app::AppExit>,
     mut windows: ResMut<Windows>,
 ){
-    egui::Window::new("frames").show(context.ctx_mut(), |ui| {
+    egui::Window::new("")
+    .anchor(egui::Align2::LEFT_TOP, (0.0,0.0))
+    .auto_sized()
+    .title_bar(false)
+    .show(context.ctx_mut(), |ui| {
         ui.label(format!("frame time: {:.3}",
-            match diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_TIME).unwrap().value() {
-                Some(x) => x,
-                None => 0.0
-            }
+            diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_TIME).unwrap().value().unwrap_or(f64::NAN)
         ));
         ui.label(format!("fps: {:.3}",
-            match diagnostic.get(FrameTimeDiagnosticsPlugin::FPS).unwrap().value() {
-                Some(x) => x,
-                None => 0.0
-            }
+            diagnostic.get(FrameTimeDiagnosticsPlugin::FPS).unwrap().value().unwrap_or(f64::NAN)
         ));
         ui.label(format!("frame count: {}",
-            match diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_COUNT).unwrap().value() {
-                Some(x) => x,
-                None => 0.0
-            }
+            diagnostic.get(FrameTimeDiagnosticsPlugin::FRAME_COUNT).unwrap().value().unwrap_or(f64::NAN)
         ));
         if ui.button("exit").clicked() {
             event.send(bevy::app::AppExit);
         }
-        let mut window = windows.get_primary_mut().unwrap();
-        match window.mode() {
-            WindowMode::Windowed => if ui.button("fullscreen").clicked() {
-                window.set_mode(WindowMode::BorderlessFullscreen);
-            }
-            WindowMode::BorderlessFullscreen => if ui.button("windowed").clicked() {
-                window.set_mode(WindowMode::Windowed);
-            }
-            _ => panic!("the fuck is going on with the window mode?")
+        let window = windows.get_primary_mut().unwrap();
+        if ui.add(
+            egui::RadioButton::new(window.mode() == WindowMode::Windowed,
+            "windowed")
+        ).clicked() {
+            window.set_mode(WindowMode::Windowed);
+        }
+        if ui.add(
+            egui::RadioButton::new(window.mode() == WindowMode::BorderlessFullscreen,
+            "borderless fullscreen")
+        ).clicked() {
+            window.set_mode(WindowMode::BorderlessFullscreen);
+        }
+        if ui.add(
+            egui::RadioButton::new(window.mode() == WindowMode::Fullscreen,
+            "fullscreen")
+        ).clicked() {
+            window.set_mode(WindowMode::Fullscreen);
+        }
+        if ui.add(
+            egui::RadioButton::new(window.mode() == WindowMode::SizedFullscreen,
+            "sized fullscreen")
+        ).clicked() {
+            window.set_mode(WindowMode::SizedFullscreen);
         }
     });
 }
+
 
 fn setup(
     mut commands: Commands,
@@ -112,7 +124,7 @@ fn setup(
         ..Default::default()
     })
     .insert(Mass(1000.0))
-    .insert(Rotate)
+    //.insert(Rotate)
     .insert(Planet(5.0));
 
     //spawn the light
@@ -126,24 +138,23 @@ fn setup(
         ..Default::default()
     });
 
-    /*/spawn the player
+    //spawn the player
     commands.spawn_bundle(PbrBundle{
         mesh: meshes.add(Mesh::from(shape::Icosphere{
-            radius: 1.0,
+            radius: 5.0,
             subdivisions: 1,
         })),
         material: materials.add(StandardMaterial { 
             base_color: Color::hex("ffffff").expect("god damn moron get the hex color right"),
             ..Default::default()
         }),
-        transform: Transform::from_xyz(0.0,10.0,1000.0),
+        transform: Transform::from_xyz(0.0,10.0,5.0),
         ..Default::default()
     })
     .insert(Player)
-    .insert(Transform::from_xyz(0.0, 10.0, 50.0))
-    .insert(Velocity(Vec3::default(), Vec3::default()))
+    .insert(Velocity(Vec3::default()))
     .insert(Mass(100.0));
-    */
+
     //spawn the camera
     commands.spawn_bundle(PerspectiveCameraBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 0.0, 50.0))
@@ -161,17 +172,20 @@ fn update_player(
     query_planet: Query<(&mut Mass, &Planet), Without<Player>>,
 ){
     for (mass, mut velocity, mut transform) in query.iter_mut() {
+        let mut forces = Vec3::default();
         for (planet_mass, planet) in query_planet.iter() {
             let direction = calc_close_point_cirlce(transform.translation, planet.0);
-
+            //println!("{direction}");
             let distance: f32 = direction.distance(transform.translation);
+            println!("{distance}");
             if direction.length() <= 1.5 {
-                velocity.0 += 
-                direction.normalize() * (GRAVITY * ((mass.0 * planet_mass.0)/(distance*distance)));
+                forces += direction.normalize() * (GRAVITY * ((mass.0 * planet_mass.0)/(distance*distance)));
             }
         }
-        transform.translation += velocity.0 * time.delta().as_secs_f32();
-        //println!("{}", velocity.0)
+        println!("{forces}");
+        velocity.0 += forces/mass.0;
+        transform.translation += velocity.0 * time.delta().as_millis() as f32;
+        println!("{}", velocity.0)
     }
 }
 
@@ -205,7 +219,7 @@ struct Mass(f32);
 struct Player;
 
 #[derive(Component)]
-struct Velocity(Vec3,Vec3);
+struct Velocity(Vec3);
 
 #[derive(Component)]
 struct Planet(f32);
