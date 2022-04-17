@@ -16,7 +16,7 @@ fn main() {
     let mut app = App::new();
     //insert resources
     app.insert_resource(ClearColor(Color::hex("000000").unwrap()))
-    .insert_resource(Msaa{ samples: 4 })
+    //.insert_resource(Msaa{ samples: 4 })
     .insert_resource(WindowDescriptor{
         title: "not anymore spinny donut go brrrrr".to_string(),
         width: 750.0,
@@ -29,6 +29,7 @@ fn main() {
         ..Default::default()
     })
     .insert_resource(CameraRotation{x: 0.0, y: 0.0, z: 0.0})
+    .insert_resource(Menu::None)
     //add events
     .add_event::<bevy::app::AppExit>()
     //add plugins
@@ -315,3 +316,8 @@ struct Velocity(Vec3);
 
 #[derive(Component)]
 struct Planet(f32);
+
+enum Menu{
+    None,
+    Pause
+}
