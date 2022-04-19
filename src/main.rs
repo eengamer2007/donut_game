@@ -298,7 +298,8 @@ struct CameraRotation{
 
 impl CameraRotation {
     fn to_quat(&self) -> Quat {
-        Quat::from_scaled_axis(Vec3::new(self.x,self.y, self.z))
+        let trans = Transform::from_xyz(0.,0.,0.);
+        trans.looking_at(Vec3::new(self.x.sin(),0.0, self.y.sin()), Vec3::Z).rotation
     }
 }
 
@@ -319,5 +320,4 @@ struct Planet(f32);
 
 enum Menu{
     None,
-    Pause
 }
